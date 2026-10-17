@@ -1,0 +1,1 @@
+alter table public.ngo_field_notes add column if not exists activity text not null default '', add column if not exists numbers text not null default '', add column if not exists notes_text text not null default '', add column if not exists photo jsonb not null default '[]'::jsonb check(jsonb_typeof(photo)='array' and jsonb_array_length(photo)<=2);

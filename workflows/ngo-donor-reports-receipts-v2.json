@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## NGO Report Desk \u2014 separate backend\n1. Assign credentials to Webhook, OmniRoute model, Gmail, WhatsApp and every Meta node.\n2. Publish; POST to /webhook/ngo-report-desk-v1 from your server with header authentication. Never expose that credential in browser code.\n3. One action per request: draft / gmail / whatsapp / facebook / instagram / receipt_preview.\n4. Private delivery requires approved=true + approved_text. Social requires public_approved=true + public_text; Instagram also needs a public HTTPS image_url.\n5. Existing WhatsApp inbound bot is NOT replaced. Forward an authenticated request from its current workflow.\n6. No scheduled sends, no automatic retry, no tax claims. No durable duplicate protection; never blindly retry an uncertain delivery.\n7. Import schema and live channels must be tested on your installed n8n version.",
+        "content": "NGO report & receipt engine \u2014 core project 28. App intake replaces Forms; Supabase replaces Sheets; direct PDFs replace Docs. Gmail and WhatsApp only. Human approval before report/receipt delivery. Select existing credentials and publish. No automatic retry of uncertain sends.",
         "height": 470,
         "width": 620
       },
@@ -36,7 +36,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const b=$json.body||{};\nconst action=b.action||'draft';\nif(!['draft','gmail','whatsapp','facebook','instagram','receipt_preview','gmail_pdf','whatsapp_pdf','capabilities'].includes(action))throw Error('Unsupported action');\nconst s=(k,max=16000)=>{const v=b[k]??'';if(typeof v!=='string'||v.length>max)throw Error('Invalid '+k);return v.trim();};\nconst out={beneficiaries:s('beneficiaries',3000),photos:s('photos',2000),donor_prompt:s('donor_prompt',30000),action,request_id:s('request_id',150),org:s('org',200),period:s('period',150),notes:s('notes'),challenges:s('challenges',5000),next:s('next',5000),approved_text:s('approved_text',50000),subject:s('subject',200)||'NGO report',email_to:s('email_to',254),whatsapp_to:s('whatsapp_to',30),public_text:s('public_text',2000),image_url:s('image_url',2000),whatsapp_phone_id:s('whatsapp_phone_id',80)||'1331179886742725',facebook_page_id:s('facebook_page_id',80)||'1444920948685962',instagram_id:s('instagram_id',80)||'17841469330811173'};\nif(!out.request_id)throw Error('Unique request_id required. Do not retry an uncertain delivery.');\nif(action==='draft'&&(!out.org||!out.period||out.notes.length<30))throw Error('org, period and at least 30 characters of notes required');\nif(['gmail','whatsapp','gmail_pdf','whatsapp_pdf'].includes(action)&&(b.approved!==true||!out.approved_text))throw Error('Human approval and approved_text required');\nif(['gmail','gmail_pdf'].includes(action)&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(out.email_to))throw Error('Valid email_to required');\nif(['whatsapp','whatsapp_pdf'].includes(action)&&(!/^\\+?[1-9]\\d{7,14}$/.test(out.whatsapp_to)||out.approved_text.length>4000))throw Error('Valid international whatsapp_to and text <=4000 characters required');\nif(['facebook','instagram'].includes(action)&&(b.public_approved!==true||!out.public_text))throw Error('Separately approved public_text required; do not send private reports to social');\nif((action==='instagram'||(action==='facebook'&&out.image_url))&&!/^https:\\/\\/[^\\s]+$/i.test(out.image_url))throw Error('Public HTTPS JPEG image_url required');\nif(action==='receipt_preview'){\n const amount=Number(b.amount);if(!Number.isFinite(amount)||amount<=0)throw Error('Positive amount required');\n out.receipt={reference:s('reference',100),date:s('date',50),donor:s('donor',200),currency:s('currency',10),amount};\n if(!out.org||Object.values(out.receipt).some(v=>v===''))throw Error('org, reference, date, donor, currency, amount required');\n}\nif(['gmail_pdf','whatsapp_pdf'].includes(action)){out.pdf_base64=s('pdf_base64',1800000);out.filename=s('filename',150);if(!/^[A-Za-z0-9+/]+=*$/.test(out.pdf_base64)||!out.pdf_base64.startsWith('JVBERi0')||!/^[-A-Za-z0-9_.]+\\.pdf$/.test(out.filename))throw Error('Valid PDF and safe filename required');if(out.approved_text.length>1000)throw Error('Thank-you must be under 1000 characters');}\nreturn [{json:out}];"
+        "jsCode": "const b=$json.body||{};\nconst action=b.action||'draft';\nif(!['draft','gmail','whatsapp','receipt_preview','gmail_pdf','whatsapp_pdf','capabilities'].includes(action))throw Error('Unsupported action');\nconst s=(k,max=16000)=>{const v=b[k]??'';if(typeof v!=='string'||v.length>max)throw Error('Invalid '+k);return v.trim();};\nconst out={beneficiaries:s('beneficiaries',3000),photos:s('photos',2000),donor_prompt:s('donor_prompt',30000),action,request_id:s('request_id',150),org:s('org',200),period:s('period',150),notes:s('notes'),challenges:s('challenges',5000),next:s('next',5000),approved_text:s('approved_text',50000),subject:s('subject',200)||'NGO report',email_to:s('email_to',254),whatsapp_to:s('whatsapp_to',30),public_text:s('public_text',2000),image_url:s('image_url',2000),whatsapp_phone_id:s('whatsapp_phone_id',80)||'1331179886742725',facebook_page_id:s('facebook_page_id',80)||'1444920948685962',instagram_id:s('instagram_id',80)||'17841469330811173'};\nif(!out.request_id)throw Error('Unique request_id required. Do not retry an uncertain delivery.');\nif(action==='draft'&&(!out.org||!out.period||out.notes.length<30))throw Error('org, period and at least 30 characters of notes required');\nif(['gmail','whatsapp','gmail_pdf','whatsapp_pdf'].includes(action)&&(b.approved!==true||!out.approved_text))throw Error('Human approval and approved_text required');\nif(['gmail','gmail_pdf'].includes(action)&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(out.email_to))throw Error('Valid email_to required');\nif(['whatsapp','whatsapp_pdf'].includes(action)&&(!/^\\+?[1-9]\\d{7,14}$/.test(out.whatsapp_to)||out.approved_text.length>4000))throw Error('Valid international whatsapp_to and text <=4000 characters required');\nif(action==='receipt_preview'){\n const amount=Number(b.amount);if(!Number.isFinite(amount)||amount<=0)throw Error('Positive amount required');\n out.receipt={reference:s('reference',100),date:s('date',50),donor:s('donor',200),currency:s('currency',10),amount};\n if(!out.org||Object.values(out.receipt).some(v=>v===''))throw Error('org, reference, date, donor, currency, amount required');\n}\nif(['gmail_pdf','whatsapp_pdf'].includes(action)){out.pdf_base64=s('pdf_base64',1800000);out.filename=s('filename',150);if(!/^[A-Za-z0-9+/]+=*$/.test(out.pdf_base64)||!out.pdf_base64.startsWith('JVBERi0')||!/^[-A-Za-z0-9_.]+\\.pdf$/.test(out.filename))throw Error('Valid PDF and safe filename required');if(out.approved_text.length>1000)throw Error('Thank-you must be under 1000 characters');}\nreturn [{json:out}];"
       },
       "id": "172b04e7-b535-4006-b0f4-27f6e006f64a",
       "name": "Validate Request and Approval",
@@ -143,72 +143,6 @@
       "typeVersion": 2.2,
       "position": [
         170,
-        100
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "48a02cfd-ac9f-40f9-b5ab-0c7533a39c0f",
-              "leftValue": "={{ $json.action }}",
-              "rightValue": "facebook",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "31a1e03a-4e1e-4eb2-8977-9e8587ef89cd",
-      "name": "Route facebook",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        430,
-        100
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "758f414a-f1d0-4b3f-9d80-9ca91bb84b18",
-              "leftValue": "={{ $json.action }}",
-              "rightValue": "instagram",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "e98ceba8-eb49-45d3-9521-c36821d2c803",
-      "name": "Route instagram",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        690,
         100
       ]
     },
@@ -347,207 +281,6 @@
     },
     {
       "parameters": {
-        "httpRequestMethod": "POST",
-        "graphApiVersion": "v25.0",
-        "node": "={{ $json.facebook_page_id }}",
-        "edge": "feed",
-        "options": {
-          "queryParameters": {
-            "parameter": [
-              {
-                "name": "message",
-                "value": "={{ $json.public_text }}"
-              }
-            ]
-          }
-        }
-      },
-      "id": "59cb1583-2db1-4518-9b78-0c2689f24d44",
-      "name": "Facebook - Publish Approved Public Copy",
-      "type": "n8n-nodes-base.facebookGraphApi",
-      "typeVersion": 1,
-      "position": [
-        430,
-        900
-      ]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { channel:'facebook', provider_result:$json, request_id:$('Validate Request and Approval').first().json.request_id } }}",
-        "options": {}
-      },
-      "id": "b55f74d8-752b-4b79-9a53-f50d2cc07f16",
-      "name": "Return Facebook Receipt",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.4,
-      "position": [
-        690,
-        900
-      ]
-    },
-    {
-      "parameters": {
-        "httpRequestMethod": "POST",
-        "graphApiVersion": "v25.0",
-        "node": "={{ $json.instagram_id }}",
-        "edge": "media",
-        "options": {
-          "queryParameters": {
-            "parameter": [
-              {
-                "name": "image_url",
-                "value": "={{ $json.image_url }}"
-              },
-              {
-                "name": "caption",
-                "value": "={{ $json.public_text }}"
-              }
-            ]
-          }
-        }
-      },
-      "id": "9e111f2c-e272-4f25-aa4b-f82be0d7d538",
-      "name": "Instagram - Create Image Container",
-      "type": "n8n-nodes-base.facebookGraphApi",
-      "typeVersion": 1,
-      "position": [
-        690,
-        1200
-      ]
-    },
-    {
-      "parameters": {
-        "resume": "timeInterval",
-        "amount": 5,
-        "unit": "seconds"
-      },
-      "id": "311d4266-2755-478a-b365-6ea93ce0421e",
-      "name": "Wait for Instagram Processing",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        950,
-        1200
-      ],
-      "webhookId": "67f499b4-4200-4ae8-95bc-038b4027ee60"
-    },
-    {
-      "parameters": {
-        "httpRequestMethod": "GET",
-        "graphApiVersion": "v25.0",
-        "node": "={{ $('Instagram - Create Image Container').first().json.id }}",
-        "edge": "",
-        "options": {
-          "queryParameters": {
-            "parameter": [
-              {
-                "name": "fields",
-                "value": "status_code,status"
-              }
-            ]
-          }
-        }
-      },
-      "id": "f5457b8e-5882-478e-a18a-e60959bc8dc1",
-      "name": "Instagram - Read Container Status",
-      "type": "n8n-nodes-base.facebookGraphApi",
-      "typeVersion": 1,
-      "position": [
-        1210,
-        1200
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const state=$json.status_code;const attempt=$runIndex+1;\nif(state==='FINISHED')return [{json:{ready:true}}];\nif(state==='ERROR'||state==='EXPIRED'||attempt>=12)throw Error('Instagram processing failed or timed out. Do not blindly repeat publication.');\nif(state==='PUBLISHED')throw Error('Container already published. Verify existing publication before any retry.');\nreturn [{json:{ready:false}}];"
-      },
-      "id": "f754fd94-79b4-465a-a3bc-bfc1159362f8",
-      "name": "Check Instagram Readiness",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1470,
-        1200
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "8fec675f-b79f-452c-a50f-839abbc950a6",
-              "leftValue": "={{ $json.ready }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "e8839826-a623-4024-857f-ed4353df26e4",
-      "name": "Instagram Ready?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        1730,
-        1200
-      ]
-    },
-    {
-      "parameters": {
-        "httpRequestMethod": "POST",
-        "graphApiVersion": "v25.0",
-        "node": "={{ $('Validate Request and Approval').first().json.instagram_id }}",
-        "edge": "media_publish",
-        "options": {
-          "queryParameters": {
-            "parameter": [
-              {
-                "name": "creation_id",
-                "value": "={{ $('Instagram - Create Image Container').first().json.id }}"
-              }
-            ]
-          }
-        }
-      },
-      "id": "4c2bb642-e209-46e6-9bc5-ad6124799429",
-      "name": "Instagram - Publish Approved Image",
-      "type": "n8n-nodes-base.facebookGraphApi",
-      "typeVersion": 1,
-      "position": [
-        1990,
-        1200
-      ]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { channel:'instagram', provider_result:$json, request_id:$('Validate Request and Approval').first().json.request_id } }}",
-        "options": {}
-      },
-      "id": "789108aa-db55-4e29-a568-225711803275",
-      "name": "Return Instagram Receipt",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.4,
-      "position": [
-        2250,
-        1200
-      ]
-    },
-    {
-      "parameters": {
         "jsCode": "const j=$('Validate Request and Approval').first().json;const r=j.receipt;\nconst text=`DONATION ACKNOWLEDGEMENT \u2014 DRAFT\\n${j.org}\\nReference: ${r.reference}\\nDate: ${r.date}\\nDonor: ${r.donor}\\nAmount: ${r.currency} ${r.amount}\\n\\nThank you for your contribution.\\n\\nThis draft is not a tax certificate. An authorised coordinator must verify payment, reference uniqueness and organisation details before issuing it.`;\nreturn [{json:{request_id:j.request_id,receipt_text:text,requires_review:true,approved:false,sent:false}}];"
       },
       "id": "234fb7cc-92b2-4f72-a513-efd00f17f306",
@@ -572,85 +305,6 @@
       "position": [
         1210,
         100
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "e088858b-7670-4669-aa76-23be5973df52",
-              "leftValue": "={{ $json.image_url }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "ef275e5d-1636-4a3a-92b7-58cbce96f9ed",
-      "name": "Facebook Has Poster?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        430,
-        850
-      ]
-    },
-    {
-      "parameters": {
-        "httpRequestMethod": "POST",
-        "graphApiVersion": "v25.0",
-        "node": "={{ $json.facebook_page_id }}",
-        "edge": "photos",
-        "options": {
-          "queryParameters": {
-            "parameter": [
-              {
-                "name": "url",
-                "value": "={{ $json.image_url }}"
-              },
-              {
-                "name": "caption",
-                "value": "={{ $json.public_text }}"
-              }
-            ]
-          }
-        }
-      },
-      "id": "8508440c-da85-4e3b-97c8-36a4942ef192",
-      "name": "Facebook - Publish Approved Poster",
-      "type": "n8n-nodes-base.facebookGraphApi",
-      "typeVersion": 1,
-      "position": [
-        690,
-        760
-      ]
-    },
-    {
-      "parameters": {
-        "content": "## Stage 2 \u2014 Posters (planned)\nApproved public facts \u2192 poster copy \u2192 generated illustration \u2192 exact text/logo layout \u2192 Facebook & Instagram sizes \u2192 preview \u2192 human approval \u2192 hosted image URL \u2192 publish.\nThis file includes image-publishing routes for both platforms. Poster GENERATION is not implemented here. Supply image_url for now. Never publish beneficiary details or private donor reports. No automatic cross-posting after report approval.",
-        "height": 290,
-        "width": 550
-      },
-      "id": "a3d91bde-2b2d-4cb6-9c53-c473a23cef1f",
-      "name": "Stage 2 Poster Roadmap",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -900,
-        850
       ]
     },
     {
@@ -893,7 +547,7 @@
         "specifyBody": "json",
         "jsonBody": "{\"kind\": \"weekly\"}",
         "options": {
-          "timeout": 60000
+          "timeout": 300000
         }
       }
     },
@@ -1018,8 +672,50 @@
       ],
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ {version:2,pdf_delivery:true,channels:[\"gmail\",\"whatsapp\",\"facebook\",\"instagram\"]} }}",
+        "responseBody": "={{ {version:2,pdf_delivery:true,channels:[\"gmail\",\"whatsapp\"]} }}",
         "options": {}
+      }
+    },
+    {
+      "id": "407cb4f0-a632-45d5-92df-1d5918aec273",
+      "name": "Pending notification schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -900,
+        1700
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ce1968a8-9159-43bc-a658-c9eb0c82ca08",
+      "name": "Deliver pending approved documents",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -600,
+        1700
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ngo-report-desk.vercel.app/api/notifications",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "options": {
+          "timeout": 300000
+        }
       }
     }
   ],
@@ -1093,25 +789,7 @@
         ],
         [
           {
-            "node": "Route facebook",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Route facebook": {
-      "main": [
-        [
-          {
-            "node": "Facebook Has Poster?",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Route instagram",
+            "node": "Prepare Receipt Preview",
             "type": "main",
             "index": 0
           }
@@ -1173,142 +851,11 @@
         ]
       ]
     },
-    "Facebook - Publish Approved Public Copy": {
-      "main": [
-        [
-          {
-            "node": "Return Facebook Receipt",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Route instagram": {
-      "main": [
-        [
-          {
-            "node": "Instagram - Create Image Container",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Prepare Receipt Preview",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Instagram - Create Image Container": {
-      "main": [
-        [
-          {
-            "node": "Wait for Instagram Processing",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Wait for Instagram Processing": {
-      "main": [
-        [
-          {
-            "node": "Instagram - Read Container Status",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Instagram - Read Container Status": {
-      "main": [
-        [
-          {
-            "node": "Check Instagram Readiness",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Check Instagram Readiness": {
-      "main": [
-        [
-          {
-            "node": "Instagram Ready?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Instagram Ready?": {
-      "main": [
-        [
-          {
-            "node": "Instagram - Publish Approved Image",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Wait for Instagram Processing",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Instagram - Publish Approved Image": {
-      "main": [
-        [
-          {
-            "node": "Return Instagram Receipt",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Prepare Receipt Preview": {
       "main": [
         [
           {
             "node": "Return Receipt Preview",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Facebook Has Poster?": {
-      "main": [
-        [
-          {
-            "node": "Facebook - Publish Approved Poster",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Facebook - Publish Approved Public Copy",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Facebook - Publish Approved Poster": {
-      "main": [
-        [
-          {
-            "node": "Return Facebook Receipt",
             "type": "main",
             "index": 0
           }
@@ -1462,6 +1009,17 @@
         [
           {
             "node": "Route Gmail PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pending notification schedule": {
+      "main": [
+        [
+          {
+            "node": "Deliver pending approved documents",
             "type": "main",
             "index": 0
           }

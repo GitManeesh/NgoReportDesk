@@ -1,0 +1,67 @@
+{
+  "name": "NGO automatic donor notifications",
+  "nodes": [
+    {
+      "id": "407cb4f0-a632-45d5-92df-1d5918aec273",
+      "name": "Pending notification schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -900,
+        1700
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ce1968a8-9159-43bc-a658-c9eb0c82ca08",
+      "name": "Deliver pending approved documents",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -600,
+        1700
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ngo-report-desk.vercel.app/api/notifications",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "options": {
+          "timeout": 300000
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Pending notification schedule": {
+      "main": [
+        [
+          {
+            "node": "Deliver pending approved documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none"
+  }
+}

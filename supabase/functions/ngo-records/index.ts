@@ -43,7 +43,19 @@ Deno.serve(async (req) => {
       if(req.method!=='POST'||!await relayAllowed())return reply(401,{error:'Worker authentication required.'});
       const text=await req.text();if(text.length>100000)return reply(413,{error:'Job too large.'});const b=JSON.parse(text);
       if(b.action==='settings'){return reply(200,{settings:await table('ngo_automation_settings','?select=*&order=owner_hash&limit=100')});}
+      if(b.action==='claim_notifications'){
+        if(b.owner_hash!==null&&!/^[a-f0-9]{64}$/.test(b.owner_hash||''))return reply(400,{error:'Invalid workspace.'});
+        const r=await fetch(`${url}/rest/v1/rpc/ngo_claim_notifications`,{method:'POST',headers:dbHeaders,body:JSON.stringify({workspace:b.owner_hash}),signal:AbortSignal.timeout(12000)});if(!r.ok)throw Error('Queue unavailable');
+        const jobs=await r.json();for(const job of jobs){const name=job.document_type==='receipt'?'ngo_donations':'ngo_report_records';const records=await table(name,`?owner_hash=eq.${job.owner_hash}&id=eq.${job.document_id}&select=*&limit=1`);job.document=records[0]||null;}
+        return reply(200,{jobs});
+      }
       if(!/^[a-f0-9]{64}$/.test(b.owner_hash||''))return reply(400,{error:'Invalid workspace.'});
+      if(b.action==='finish_notification'){
+        if(!UUID.test(b.id||'')||!['sent','uncertain'].includes(b.status))return reply(400,{error:'Invalid notification result.'});
+        const rows=await table('ngo_notification_outbox',`?owner_hash=eq.${b.owner_hash}&id=eq.${b.id}&status=eq.sending&select=*`);if(!rows.length)return reply(409,{error:'Notification is not active.'});
+        await table('ngo_notification_outbox',`?owner_hash=eq.${b.owner_hash}&id=eq.${b.id}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:b.status,completed_at:new Date().toISOString()})});
+        if(b.status==='sent'&&rows[0].document_type==='receipt')await table('ngo_donations',`?owner_hash=eq.${b.owner_hash}&id=eq.${rows[0].document_id}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({receipt_sent:true,thank_you_sent:true})});return reply(200,{updated:true});
+      }
       if(b.action==='claim_run'){if(!/^\d{4}-\d{2}$/.test(b.period||''))return reply(400,{error:'Invalid run period.'});const rows=await table('ngo_schedule_runs','?on_conflict=owner_hash,period,kind',{method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=representation'},body:JSON.stringify({owner_hash:b.owner_hash,period:b.period,kind:'monthly'})});return reply(200,{claimed:rows?.length===1});}
       if(b.action==='grant_access'){await table('ngo_channel_access','?on_conflict=owner_hash',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({owner_hash:b.owner_hash,enabled:true})});return reply(200,{connected:true});}
       if(b.action==='notes'){
@@ -68,6 +80,12 @@ Deno.serve(async (req) => {
       if(b.action==='finish'&&['sent','uncertain'].includes(b.status)){await table('ngo_report_delivery_log',`?id=eq.${b.id}&owner_hash=eq.${hash}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:b.status})});return reply(200,{updated:true});}
       return reply(400,{error:'Invalid action.'});
     }
+    if(['contacts','notifications'].includes(resource)){
+      const name=resource==='contacts'?'ngo_donors':'ngo_notification_outbox';
+      if(req.method==='GET'){const rows=await table(name,`?owner_hash=eq.${hash}&select=*&order=created_at.desc&limit=100`);for(const row of rows)delete row.owner_hash;return reply(200,{records:rows});}
+      if(resource==='contacts'&&req.method==='POST'){const b=await req.json();if(!UUID.test(b.id||'')||typeof b.receives_reports!=='boolean')return reply(400,{error:'Invalid contact preference.'});await table(name,`?owner_hash=eq.${hash}&id=eq.${b.id}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({receives_reports:b.receives_reports})});return reply(200,{saved:true});}
+      return reply(405,{error:'Method not allowed.'});
+    }
     if(resource==='access'){if(req.method!=='GET')return reply(405,{error:'Read only.'});const rows=await table('ngo_channel_access',`?owner_hash=eq.${hash}&enabled=eq.true&select=enabled`);return reply(200,{enabled:rows.length===1});}
     if(['settings','field_notes','drafts'].includes(resource)){
       const name={settings:'ngo_automation_settings',field_notes:'ngo_field_notes',drafts:'ngo_report_drafts'}[resource];
@@ -78,7 +96,7 @@ Deno.serve(async (req) => {
         if(id&&!rows.length)return reply(404,{error:'Draft not found.'});
         return reply(200,id?{record:rows[0]}:{records:rows});
       }
-      const text=await req.text();if(text.length>35000)return reply(413,{error:'Input too large.'});const b=JSON.parse(text);
+      const text=await req.text();if(text.length>(resource==='field_notes'?2000000:35000))return reply(413,{error:'Input too large.'});const b=JSON.parse(text);
       if(resource==='settings'){
         if(typeof b.org!=='string'||!b.org.trim()||b.org.length>200)return reply(400,{error:'Organisation is required.'});
         const email=typeof b.coordinator_email==='string'?b.coordinator_email.trim():'';const whatsapp=typeof b.coordinator_whatsapp==='string'?b.coordinator_whatsapp.trim():'';
@@ -91,7 +109,10 @@ Deno.serve(async (req) => {
         if(!UUID.test(b.client_id||'')||!/^\d{4}-\d{2}-\d{2}$/.test(b.note_date||'')||!b.notes||typeof b.org!=='string'||!b.org.trim()||b.org.length>200)return reply(400,{error:'Invalid field note.'});
         if(!Number.isFinite(Date.parse(b.note_date))||new Date(b.note_date).toISOString().slice(0,10)!==b.note_date)return reply(400,{error:'Invalid note date.'});
         for(const k of ['notes','beneficiaries','challenges','next','photos'])if(typeof b.notes[k]!=='string'||b.notes[k].length>14000)return reply(400,{error:'Invalid note field.'});
-        await table(name,'?on_conflict=owner_hash,client_id',{method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=minimal'},body:JSON.stringify({owner_hash:hash,client_id:b.client_id,note_date:b.note_date,org:b.org.trim(),notes:b.notes})});return reply(200,{saved:true});
+        if(typeof b.activity!=='string'||!b.activity.trim()||b.activity.length>300||typeof b.numbers!=='string'||b.numbers.length>1000||typeof b.notes_text!=='string'||!b.notes_text.trim()||b.notes_text.length>10000)return reply(400,{error:'Date, activity, numbers and notes must match the field-note form.'});
+        if(!Array.isArray(b.photo)||b.photo.length>2)return reply(400,{error:'At most two photos are allowed.'});
+        for(const p of b.photo){if(!p||typeof p.name!=='string'||p.name.length>150||typeof p.data_url!=='string'||p.data_url.length>667000||!/^data:image\/(jpeg|png);base64,[A-Za-z0-9+/]+=*$/.test(p.data_url))return reply(400,{error:'Invalid field-note photo.'});const bytes=atob(p.data_url.split(',')[1]);if(!bytes.startsWith('\x89PNG\r\n\x1a\n')&&!(bytes.charCodeAt(0)===255&&bytes.charCodeAt(1)===216))return reply(400,{error:'Invalid photo content.'});}
+        await table(name,'?on_conflict=owner_hash,client_id',{method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=minimal'},body:JSON.stringify({owner_hash:hash,client_id:b.client_id,note_date:b.note_date,org:b.org.trim(),notes:b.notes,activity:b.activity||'',numbers:b.numbers||'',notes_text:b.notes_text||b.notes.notes,photo:b.photo||[]})});return reply(200,{saved:true});
       }
       return reply(405,{error:'Read-only resource.'});
     }
@@ -137,6 +158,7 @@ Deno.serve(async (req) => {
       if(data.currency!=='INR'||!['UPI','Bank transfer','Cash','Cheque','Other'].includes(data.mode))return reply(400,{error:'Invalid currency or payment mode.'});
       const email=typeof data.email==='string'?data.email.trim():'';const whatsapp=typeof data.whatsapp==='string'?data.whatsapp.trim():'';
       if((email&&(email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))||(whatsapp&&!/^\+?[1-9]\d{7,14}$/.test(whatsapp)))return reply(400,{error:'Enter a valid email or international WhatsApp number.'});
+      if(!email&&!whatsapp)return reply(400,{error:'Add a donor email or WhatsApp number for automatic receipt delivery.'});
       if(typeof data.thank_you!=='string'||!data.thank_you.trim()||data.thank_you.length>1000)return reply(400,{error:'Review the thank-you message.'});
       await query('?on_conflict=owner_hash,client_id',{method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=minimal'},body:JSON.stringify({owner_hash:hash,client_id:data.client_id,org:data.org.trim(),donor:data.donor.trim(),donated_on:data.donated_on,amount,currency:'INR',mode:data.mode,email,whatsapp,thank_you:data.thank_you.trim()})});
       const rows=await query(`?owner_hash=eq.${hash}&client_id=eq.${data.client_id}&select=id,receipt_no,created_at&limit=1`);

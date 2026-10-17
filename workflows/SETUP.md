@@ -1,37 +1,41 @@
-# NGO Donor Reports & Donation Receipts — project 28
+# NGO report & receipt engine — project 28
 
-Google Forms, Sheets and Docs are excluded. The app provides intake; Supabase provides records; PDFs are generated directly. Existing Gmail, WhatsApp, Facebook and Instagram routes are retained. Instagram/Facebook poster generation remains stage two; publishing an existing poster URL is retained.
+This implements project 28 with only the agreed substitutions: app forms for Google Forms, Supabase for Google Sheets, direct PDFs for Google Docs, and WhatsApp for Telegram. Facebook, Instagram and poster work are excluded.
 
-## Publish the automation
+## Required intake
 
-1. Import `ngo-donor-reports-receipts-v2.json` as a NEW workflow. Keep the working v1 workflow until v2 is tested. The new webhook path is `ngo-report-desk-v2`.
-2. Select existing credentials on the webhook (Header Auth, `X-NGO-Key`), OmniRoute model, Gmail, WhatsApp and Facebook/Instagram HTTP nodes. On the three schedule/notification HTTP nodes, select the same Header Auth credential. Do not alter the existing WhatsApp inbound bot workflow.
-3. Publish v2. Test the webhook with action `capabilities` and a unique `request_id` using your existing private header. It must return `version:2` and `pdf_delivery:true`.
-4. Set Vercel `N8N_REPORT_WEBHOOK_URL` to `https://n8n.myaiteam.work.gd/webhook/ngo-report-desk-v2`, then redeploy. `N8N_ENGINE_WEBHOOK_URL` is already configured for this URL. Keep `N8N_WEBHOOK_SECRET` unchanged.
-5. In Records, connect coordinator access using your existing workflow header-auth secret. This enables sending/publishing for that browser; the public app itself requires no login. The secret is not stored in the browser.
-6. Save field notes in the app with their date. In Records, enable weekly reports and monthly follow-up as needed. Schedule timezone is Asia/Kolkata: Monday 08:00; first day of each month 09:00.
+- `ngo_donations`: donation date, donor, email/WhatsApp, amount, mode, receipt number, receipt_sent and thank_you_sent.
+- `ngo_field_notes`: activity date, activity, numbers, notes and photo. Captions and optional challenges/next-week notes support the donor's required sections.
 
-The OmniRoute credential must route to Gemini if retaining the specification's model choice. No provider credentials are present in the export. Selected credentials on the existing v1 workflow are not changed by this import.
+Submitting either intake form creates the record automatically. No separate Sheet or database update is required. Original numbers are preserved; missing figures are not invented.
+
+## Automatic notification setup — once
+
+Keep the already published v2 report workflow and its credentials. Import `automatic-notifications.json` as a separate workflow, select the existing Header Auth credential (`X-NGO-Key`) on its HTTP node, then publish it. It checks the pending notification queue every minute. It does not replace the WhatsApp inbound bot.
+
+In the app, connect coordinator access once under Records using the existing private header-auth secret. Save the organisation and coordinator contact, and enable Monday reports / monthly follow-up as required. Schedules use Asia/Kolkata: Monday 08:00, monthly on day 1 at 09:00.
+
+- An approved donation creates its numbered receipt and queues the PDF + personalised thank-you to that donor.
+- Saving an approved report queues its PDF to saved donors for the same organisation who receive reports.
+- Contacts are stored from donation entries. WhatsApp is used when available, otherwise Gmail. There is no per-report manual recipient list.
+- The monthly schedule flags donors without a donation in 12 months and notifies the saved coordinator.
+- The app requests dispatch automatically after saving; the minute schedule also picks up pending jobs if the browser closes.
+- Notification records are claimed atomically. An uncertain provider result is flagged for review and is not retried blindly. Provider acceptance does not establish recipient delivery.
+
+The full core export `ngo-donor-reports-receipts-v2.json` includes the same queue schedule and removes social routes. Replacing an existing workflow is unnecessary for enabling the standalone notification schedule. If using the full export instead, do not enable a duplicate monthly/weekly schedule.
 
 ## Report contract
 
-`donor-report-prompt.txt` contains the requested instruction. The model returns evidence-linked JSON for verification; the app renders the exact five donor sections. The report, including its metadata and headings, must contain fewer than 400 words. Evidence/checks stay in the coordinator view. User-supplied photo captions are preserved; no captions or beneficiary figures are invented. Attendance is not summed into unique beneficiaries.
+`donor-report-prompt.txt` retains the requested prompt. Donor output has exactly five sections: activities this week, beneficiaries reached (numbers), challenges, next week, and photos (list captions), under 400 words. Source evidence remains in the coordinator review. AI report generation uses the existing OmniRoute credential; route it to Gemini if retaining the specified provider.
 
-A scheduled report is a draft until a coordinator approves it. Human approval is mandatory before delivery. Reports can be downloaded as PDF with optional photo pages. Private sharing attaches the approved report PDF to up to ten explicitly selected recipients. Receipt delivery attaches the actual numbered PDF with the approved thank-you.
+Human approval remains necessary before donor reports and financial receipts are sent. No verified tax exemption or 80G entitlement is asserted; the receipt contains an accountant-review placeholder.
 
-## Acceptance tests — fictional data only
+## Acceptance tests
 
-- Add an approved fictional donation. A database-generated receipt number and PDF must be produced; repeat the same request ID and confirm the same receipt is returned. To test Gmail or WhatsApp delivery, use only an explicitly approved recipient and confirm both PDF and thank-you arrive. Check delivery flags. The under-one-minute delivery target is not yet measured.
-- Save field notes dated in the previous India-time Monday–Sunday week. Execute the weekly schedule. Open the draft in Records, verify all five sections and the word count, approve, save, then download PDF. Do not add participation across activities into a unique beneficiary total.
-- Add a fictional donor with an old donation, then another recent donation using the same email or WhatsApp number. Only donors with no recorded donation in 12 months should appear in follow-up. Execute the monthly schedule and confirm the coordinator-only alert.
-- Check that an unrelated browser cannot list or open these private records. Clearing browser storage loses access to its workspace key; download reports for archival purposes.
+Use fictional data and explicitly selected test recipients only:
 
-## Boundaries
+1. Submit a donation; approve it; confirm a numbered receipt PDF and thank-you reach that donor, measure the under-one-minute target, and verify both sent flags. Repeating the same intake request must not duplicate the receipt or notification.
+2. Submit last week's field notes with date, activity, numbers, notes and photo. Run the Monday schedule; review the five-section report, approve it and verify its PDF reaches saved donors.
+3. Give a fictional donor an old donation and no recent donation; run the monthly schedule and confirm the coordinator is notified. Add a recent donation and confirm the donor is no longer flagged.
 
-- Gmail/WhatsApp/social delivery requires valid credentials and a live provider account. WhatsApp documents require an allowed service conversation or approved template strategy; template messages are not implemented in this workflow. No template-window bypass is attempted.
-- Delivery retries are blocked after an uncertain receipt result. Reconcile n8n/provider history before manually resetting the delivery log. Provider acceptance does not prove recipient delivery.
-- Inactivity scans stop for manual review at 1,000 donations rather than claiming complete results. Matching uses email, otherwise WhatsApp, otherwise exact donor name; a permanent donor directory would improve identity resolution.
-- Weekly schedules read at most 1,000 notes per workspace and require shorter input when the report input limits are exceeded. Very large multi-organisation batches need queue batching.
-- Monthly alert dispatch is claimed once per workspace and month. An uncertain execution requires manual reconciliation before resetting its run claim.
-- Receipts are donation acknowledgements, not verified tax certificates. An accountant must verify tax-exemption details; no 80G entitlement is asserted.
-- No production messages were sent as part of development tests.
+Provider delivery and the one-minute target still require end-to-end testing after the notification schedule is published. WhatsApp delivery must use a supported service conversation or approved template; template messages are not implemented. History scans stop for review at 1,000 donations/notes rather than claiming complete results. No production messages were sent during development tests.

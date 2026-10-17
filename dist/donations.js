@@ -22,7 +22,9 @@
   if(!name||!org||!amount){$('donation-status').textContent='Add the organisation, donor and amount first.';return;}
   $('thank-you').value=`Dear ${name}, thank you for your donation of INR ${Number(amount).toFixed(2)} to ${org}. Please find your donation receipt attached.`;$('donation-approval').checked=false;
  };
- for(const input of $('donation-form').querySelectorAll('input,textarea,select'))if(input.id!=='donation-approval')input.addEventListener('input',()=>{if(input.id!=='receipt-channel')clientId=crypto.randomUUID();$('donation-approval').checked=false;});
+ for(const input of $('donation-form').querySelectorAll('input,textarea,select'))if(input.id!=='donation-approval')input.addEventListener('input',()=>{clientId=crypto.randomUUID();$('donation-approval').checked=false;});
+ let customThanks=false;$('thank-you').addEventListener('input',()=>customThanks=true);
+ for(const id of ['donor-name','donation-org','donation-amount'])$(id).addEventListener('input',()=>{if(!customThanks&&$('donor-name').value.trim()&&$('donation-org').value.trim()&&Number($('donation-amount').value)>0){$('thank-you').value='Dear '+$('donor-name').value.trim()+', thank you for your donation of INR '+Number($('donation-amount').value).toFixed(2)+' to '+$('donation-org').value.trim()+'. Your donation receipt is attached.';}});
  $('donation-form').onsubmit=async(event)=>{
   event.preventDefault();if(busy||!$('donation-approval').checked)return;
   busy=true;$('save-donation').disabled=true;
@@ -34,14 +36,7 @@
    $('donation-status').textContent=`Receipt created · ${result.record.receipt_no}. Delivery has not been sent.`;
    $('donation-approval').checked=false;await load();
    await downloadPdf({type:'receipt',id:result.record.id},result.record.receipt_no+'.pdf',$('donation-status'));
-   const channel=$('receipt-channel').value;
-   if(channel!=='download'){
-     const outcomes=[];
-     for(const selected of channel==='both'?['gmail','whatsapp']:[channel]){
-       try{const r=await fetch('/api/deliver',{method:'POST',headers:{'Content-Type':'application/json','X-Workspace-Key':key()},body:JSON.stringify({id:result.record.id,channel:selected,approved:true}),signal:AbortSignal.timeout(60000)});const resultData=await r.json();outcomes.push(selected+': '+(r.ok?'accepted by provider':resultData.error||'not confirmed'));}catch{outcomes.push(selected+': result uncertain; check the provider before retrying');}
-     }
-     $('donation-status').textContent=result.record.receipt_no+' · '+outcomes.join(' · ');await load();
-   }
+   try{const delivery=await window.runAutomaticNotifications();$('donation-status').textContent=result.record.receipt_no+' · '+delivery.accepted+' notification(s) accepted by provider'+(delivery.uncertain?' · Some deliveries need review.':'');await load();}catch(e){$('donation-status').textContent=result.record.receipt_no+' saved. '+e.message;}
   }catch(e){$('donation-status').textContent=e.message;}
   finally{busy=false;$('save-donation').disabled=false;}
  };
@@ -52,10 +47,6 @@
    for(const d of records){
     const row=el('div','');row.className='donation-row';row.append(el('h4',d.receipt_no),el('p',`${d.donor} · INR ${Number(d.amount).toFixed(2)} · ${d.donated_on}`),el('p',d.receipt_sent?'Receipt and thank-you sent':'Receipt created · not sent'));
     const pdf=el('button','Download receipt PDF ↓');pdf.className='secondary';pdf.onclick=()=>downloadPdf({type:'receipt',id:d.id},d.receipt_no+'.pdf',$('donation-list-status'));row.append(pdf);
-    for(const channel of ['gmail','whatsapp'])if(channel==='gmail'?d.email:d.whatsapp){const send=el('button',channel==='gmail'?'Email receipt':'WhatsApp receipt');send.className='secondary';send.onclick=async()=>{
-      if(!confirm(`Send receipt ${d.receipt_no} and its approved thank-you to ${channel==='gmail'?d.email:d.whatsapp}?`))return;
-      send.disabled=true;try{const r=await fetch('/api/deliver',{method:'POST',headers:{'Content-Type':'application/json','X-Workspace-Key':key()},body:JSON.stringify({id:d.id,channel,approved:true}),signal:AbortSignal.timeout(60000)});const result=await r.json();if(!r.ok)throw Error(result.error||'Delivery failed.');$('donation-list-status').textContent='Receipt accepted by the delivery provider.';await load();}catch(e){$('donation-list-status').textContent=e.message;}finally{send.disabled=false;}
-    };row.append(send);}
     $('donation-list').append(row);
    }
   }catch(e){$('donation-list-status').textContent=e.message;}

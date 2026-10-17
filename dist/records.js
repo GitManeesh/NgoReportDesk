@@ -51,6 +51,7 @@
       const data=await request('',{method:'POST',body:JSON.stringify(payload)});
       if(!data.record?.id)throw Error('Storage did not confirm the saved record.');
       savedVersion=before;savedRecord=data.record;
+      window.runAutomaticNotifications?.().then(result=>{if(before===version())$('save-status').textContent='Record saved · '+data.record.id+' · '+result.accepted+' notification(s) accepted by provider'+(result.uncertain?' · Some deliveries need review.':'');}).catch(e=>{$('save-status').textContent='Record saved · '+data.record.id+'. '+e.message;});
       saving=false;sync();
       if(before!==version()||!approvedReport()) $('save-status').textContent='The earlier approved version was saved. Review and save your current changes separately.';
     } catch(error) {
@@ -99,13 +100,6 @@
     finally{if(sequence===listSequence)$('refresh-records').disabled=false;}
   }
   $('connect-coordinator').onclick=async()=>{try{const secret=$('coordinator-key').value;$('coordinator-key').value='';const r=await fetch('/api/access',{method:'POST',headers:{'Content-Type':'application/json','X-Workspace-Key':workspaceKey(),'X-Coordinator-Key':secret},body:'{}',signal:AbortSignal.timeout(20000)});const d=await r.json();if(!r.ok)throw Error(d.error||'Connection failed.');$('coordinator-access-status').textContent='Coordinator access connected for this browser.';}catch(e){$('coordinator-access-status').textContent=e.message;}};
-  $('note-date').value=new Date().toLocaleDateString('en-CA');
-  let noteId=crypto.randomUUID();
-  for(const id of ['org','notes','challenges','next','beneficiaries','photos','note-date'])$(id).addEventListener('input',()=>noteId=crypto.randomUUID());
-  $('save-field-notes').onclick=async()=>{
-    const notes=snapshot();if(!notes.org||notes.notes.length<30){$('field-note-status').textContent='Add an organisation and at least 30 characters of activity notes.';return;}
-    try{await request('?resource=field_notes',{method:'POST',body:JSON.stringify({client_id:noteId,org:notes.org,note_date:$('note-date').value,notes})});$('field-note-status').textContent='Field notes saved for the weekly report.';}catch(e){$('field-note-status').textContent=e.message;}
-  };
   $('save-schedule').onclick=async()=>{
     try{await request('?resource=settings',{method:'POST',body:JSON.stringify({org:$('schedule-org').value.trim(),weekly_enabled:$('weekly-enabled').checked,monthly_enabled:$('monthly-enabled').checked,coordinator_email:$('coordinator-email').value.trim(),coordinator_whatsapp:$('coordinator-whatsapp').value.trim()})});$('schedule-status').textContent='Preferences saved. Schedules run when the updated n8n workflow is published.';}catch(e){$('schedule-status').textContent=e.message;}
   };

@@ -5,7 +5,7 @@ const PROMPT="You write donor reports for a small NGO in India. Notes from this 
 const count=text=>String(text).trim().split(/\s+/u).filter(Boolean).length;
 function beneficiaries(notes){return String(notes).split(/\n|(?<=[.!?])\s+/u).map(x=>x.trim()).filter(x=>/\d/.test(x)&&/\b(beneficiar\w*|participants?|attendances?|attendees?|people|persons?|children|women|men|families|households?|students?)\b/i.test(x));}
 function build(input,report){
- const sections=[report.activities.map(x=>x.summary),beneficiaries(input.beneficiaries||input.notes),report.challenges.map(x=>x.summary),report.next_steps.map(x=>x.summary),String(input.photos||'').split('\n').map(x=>x.trim()).filter(Boolean)];
+ const sections=[report.activities.map(x=>x.summary),input.beneficiaries?.trim()?input.beneficiaries.split('\n').map(x=>x.trim()).filter(Boolean):beneficiaries(input.notes),report.challenges.map(x=>x.summary),report.next_steps.map(x=>x.summary),String(input.photos||'').split('\n').map(x=>x.trim()).filter(Boolean)];
  const text=['WEEKLY DONOR REPORT',input.org,'Reporting period: '+input.period,...HEADINGS.flatMap((h,i)=>['',h.toUpperCase(),...(sections[i].length?sections[i]:[i===4?'No photo captions provided.':'Not provided in the notes.'])])].join('\n');
  if(count(text)>=400)throw Error('The report must be under 400 words. Shorten your notes or summaries and try again.');
  return text;
