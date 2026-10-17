@@ -19,7 +19,7 @@ async function handler(req,res){
  const ip=String(req.headers['x-vercel-forwarded-for']||req.socket?.remoteAddress||'unknown');const key=crypto.createHash('sha256').update(ip).digest('hex');const rate=recent.get(key)||{start:now,count:0};
  if(rate.count>=6)return res.status(429).json({error:'Please wait a minute before creating another draft.'});rate.count++;recent.set(key,rate);
  try{
-  const upstream=await fetch(url,{method:'POST',signal:AbortSignal.timeout(55000),headers:{'Content-Type':'application/json','X-NGO-Key':secret},body:JSON.stringify({...input,donor_prompt:Contract.PROMPT.replace('{{notes}}',JSON.stringify({activities:input.notes,beneficiaries:input.beneficiaries,challenges:input.challenges,next_week:input.next,photos:input.photos.split('\n').filter(Boolean)})),action:'draft',request_id:crypto.randomUUID()})});
+  const upstream=await fetch(url,{method:'POST',signal:AbortSignal.timeout(150000),headers:{'Content-Type':'application/json','X-NGO-Key':secret},body:JSON.stringify({...input,donor_prompt:Contract.PROMPT.replace('{{notes}}',JSON.stringify({activities:input.notes,beneficiaries:input.beneficiaries,challenges:input.challenges,next_week:input.next,photos:input.photos.split('\n').filter(Boolean)})),action:'draft',request_id:crypto.randomUUID()})});
   if(!upstream.ok)return res.status(502).json({error:upstream.status===401||upstream.status===403?'Report drafting is temporarily unavailable. Please contact the app administrator.':'We couldn’t create your draft. Please try again shortly.'});
   const response=await upstream.json();if(response.requires_review!==true)throw Error('Missing review requirement');
   const report=validateOutput(response.report,input);
