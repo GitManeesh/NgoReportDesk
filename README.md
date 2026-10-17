@@ -40,3 +40,9 @@ Static assets live in `dist/`. `vercel.json` declares the static output director
 ## Privacy and human review
 
 Use dummy data in demonstrations. The service worker caches static assets only, not report inputs or API responses. A coordinator must check facts; future delivery must require approval. Do not claim tax deductibility or 80G eligibility without verified details and accountant-approved wording.
+
+## n8n integration
+
+The Vercel `/api/report` endpoint forwards draft-only requests to the Oracle n8n workflow; OmniRoute credentials stay in n8n. Set `N8N_REPORT_WEBHOOK_URL` and secret `N8N_WEBHOOK_SECRET` (matching Header Auth `X-NGO-Key`) in Vercel. Redeploy after changing environment variables. Missing configuration returns HTTP 503. In-memory request limiting is best-effort, not durable distributed rate limiting. Validate n8n live with fictional notes before use.
+
+Browser Print / Save as PDF is available after review approval. AI transport and evidence validation tests: `node --test tests/report.test.cjs`. Actual provider execution remains unverified until credentials are configured.
