@@ -12,17 +12,17 @@ async function handler(req,res){
  let input;try{input=validateInput(typeof req.body==='string'?JSON.parse(req.body):req.body);}catch(e){return res.status(400).json({error:e.message});}
  const endpoint=process.env.N8N_REPORT_WEBHOOK_URL;
  const secret=process.env.N8N_WEBHOOK_SECRET;
- if(!endpoint||!secret)return res.status(503).json({error:'The n8n connection needs its server-side webhook credential. Local organising is still available.'});
- let url;try{url=new URL(endpoint);if(url.protocol!=='https:'||url.username||url.password||url.hostname!=='n8n.myaiteam.work.gd'||url.pathname!=='/webhook/ngo-report-desk-v1'||url.search)throw Error();}catch{return res.status(503).json({error:'The server webhook configuration is invalid.'});}
+ if(!endpoint||!secret)return res.status(503).json({error:'Report drafting is temporarily unavailable. Please try again later.'});
+ let url;try{url=new URL(endpoint);if(url.protocol!=='https:'||url.username||url.password||url.hostname!=='n8n.myaiteam.work.gd'||url.pathname!=='/webhook/ngo-report-desk-v1'||url.search)throw Error();}catch{return res.status(503).json({error:'Report drafting is temporarily unavailable. Please try again later.'});}
  const now=Date.now();for(const[k,v]of recent)if(now-v.start>60000)recent.delete(k);
  const ip=String(req.headers['x-vercel-forwarded-for']||req.socket?.remoteAddress||'unknown');const key=crypto.createHash('sha256').update(ip).digest('hex');const rate=recent.get(key)||{start:now,count:0};
  if(rate.count>=6)return res.status(429).json({error:'Please wait a minute before creating another draft.'});rate.count++;recent.set(key,rate);
  try{
   const upstream=await fetch(url,{method:'POST',signal:AbortSignal.timeout(55000),headers:{'Content-Type':'application/json','X-NGO-Key':secret},body:JSON.stringify({...input,action:'draft',request_id:crypto.randomUUID()})});
-  if(!upstream.ok)return res.status(502).json({error:upstream.status===401||upstream.status===403?'n8n rejected the server credential. Check Header Auth configuration.':'The n8n workflow could not finish. Check its latest execution.'});
+  if(!upstream.ok)return res.status(502).json({error:upstream.status===401||upstream.status===403?'Report drafting is temporarily unavailable. Please contact the app administrator.':'We couldn’t create your draft. Please try again shortly.'});
   const response=await upstream.json();if(response.requires_review!==true)throw Error('Missing review requirement');
   const report=validateOutput(response.report,input);
   return res.status(200).json({report,requires_review:true,request_id:response.request_id});
- }catch{return res.status(502).json({error:'The n8n report could not be verified or timed out. Nothing was approved or sent.'});}
+ }catch{return res.status(502).json({error:'We couldn’t verify the draft. Please try again. Your notes have not been sent to any recipient.'});}
 }
 module.exports=handler;module.exports.validateInput=validateInput;module.exports.validateOutput=validateOutput;
