@@ -19,7 +19,7 @@ function setup(){
   });
   return {rows,call:async(key,method='GET',body,path='')=>handler(new Request('https://edge.test/ngo-records'+path,{method,headers:{'X-Workspace-Key':key,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})}))};
 }
-const payload={org:'Fictional Test NGO',period:'October 2026',content:'Held a workshop with 24 participants. Coordinator reviewed the report.',approved:true,client_id:'a'.repeat(64)};
+const payload={org:'Fictional Test NGO',period:'October 2026',content:require('../dist/report-contract.js').build({org:'Fictional Test NGO',period:'October 2026',notes:'Held a workshop with 24 participants.'},{activities:[{summary:'Held a workshop with 24 participants.'}],challenges:[],next_steps:[]}),approved:true,client_id:'a'.repeat(64)};
 test('requires a workspace key and explicit approval',async()=>{
   const {call}=setup();assert.equal((await call('')).status,401);
   assert.equal((await call('1'.repeat(64),'POST',{...payload,approved:false})).status,400);

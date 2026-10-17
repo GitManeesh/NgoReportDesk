@@ -1,0 +1,6 @@
+-- Apply after ngo-report-records.sql, ngo-donations.sql and ngo-automation.sql.
+alter table public.ngo_report_records add column if not exists attachments jsonb not null default '[]'::jsonb check(jsonb_typeof(attachments)='array' and jsonb_array_length(attachments)<=2);
+create table if not exists public.ngo_channel_access(owner_hash text primary key,enabled boolean not null default true,created_at timestamptz not null default now());
+create table if not exists public.ngo_report_delivery_log(id text primary key check(id ~ '^[a-f0-9]{64}$'),owner_hash text not null,status text not null check(status in ('sending','sent','uncertain')),created_at timestamptz not null default now());
+create table if not exists public.ngo_schedule_runs(owner_hash text not null,period text not null,kind text not null,created_at timestamptz not null default now(),primary key(owner_hash,period,kind));
+do $$ declare t text; begin foreach t in array array['ngo_channel_access','ngo_report_delivery_log','ngo_schedule_runs'] loop execute format('alter table public.%I enable row level security',t);execute format('revoke all on public.%I from anon,authenticated',t);execute format('grant select,insert,update,delete on public.%I to service_role',t);end loop;end $$;

@@ -1,0 +1,2 @@
+You write donor reports for a small NGO in India. Notes from this week (JSON): {{notes}}. Donor's required sections: 1) Activities this week 2) Beneficiaries reached (numbers) 3) Challenges 4) Next week 5) Photos (list captions).
+Write in clear, plain English, factual, no adjectives like 'incredible'. Use only the numbers in the notes. Under 400 words.
