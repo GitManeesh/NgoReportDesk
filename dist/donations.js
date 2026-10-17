@@ -26,8 +26,9 @@
  let customThanks=false;$('thank-you').addEventListener('input',()=>customThanks=true);
  for(const id of ['donor-name','donation-org','donation-amount'])$(id).addEventListener('input',()=>{if(!customThanks&&$('donor-name').value.trim()&&$('donation-org').value.trim()&&Number($('donation-amount').value)>0){$('thank-you').value='Dear '+$('donor-name').value.trim()+', thank you for your donation of INR '+Number($('donation-amount').value).toFixed(2)+' to '+$('donation-org').value.trim()+'. Your donation receipt is attached.';}});
  $('donation-form').onsubmit=async(event)=>{
-  event.preventDefault();if(busy||!$('donation-approval').checked)return;
+  event.preventDefault();if(busy||!$('donation-approval').checked)return;if(!$('donation-org').value.trim()){$('donation-status').textContent='Add your organisation in Settings first.';$('settings-dialog').showModal();$('workspace-org').focus();return;}
   busy=true;$('save-donation').disabled=true;
+  const contact=$('donor-contact').value.trim();$('donor-email').value=contact.includes('@')?contact:'';$('donor-whatsapp').value=contact.includes('@')?'':contact;
   const fields={org:'donation-org',donor:'donor-name',donated_on:'donation-date',amount:'donation-amount',mode:'donation-mode',email:'donor-email',whatsapp:'donor-whatsapp',thank_you:'thank-you'};
   const data=Object.fromEntries(Object.entries(fields).map(([k,id])=>[k,$(id).value.trim()]));
   $('donation-status').textContent='Creating receipt…';
@@ -45,8 +46,8 @@
   try{
    const {records,limited}=await request('?resource=donations');$('donation-list-status').textContent=records.length?`${records.length} donations${limited?' · latest 1,000 shown':''}`:'No donations recorded yet.';
    for(const d of records){
-    const row=el('div','');row.className='donation-row';row.append(el('h4',d.receipt_no),el('p',`${d.donor} · INR ${Number(d.amount).toFixed(2)} · ${d.donated_on}`),el('p',d.receipt_sent?'Receipt and thank-you sent':'Receipt created · not sent'));
-    const pdf=el('button','Download receipt PDF ↓');pdf.className='secondary';pdf.onclick=()=>downloadPdf({type:'receipt',id:d.id},d.receipt_no+'.pdf',$('donation-list-status'));row.append(pdf);
+    const row=el('tr','');for(const text of [d.donated_on,d.donor,'INR '+Number(d.amount).toFixed(2),d.mode,d.receipt_no,d.receipt_sent?'Sent':'Pending',d.thank_you_sent?'Sent':'Pending'])row.append(el('td',text));
+    const pdf=el('button','Download receipt PDF ↓');pdf.className='secondary';pdf.onclick=()=>downloadPdf({type:'receipt',id:d.id},d.receipt_no+'.pdf',$('donation-list-status'));row.children[4].append(document.createElement('br'),pdf);
     $('donation-list').append(row);
    }
   }catch(e){$('donation-list-status').textContent=e.message;}
@@ -60,5 +61,5 @@
  $('approve').addEventListener('change',()=>{$('download-pdf').disabled=!approvedReport();});
  for(const id of ['org','period','notes','challenges','next','beneficiaries','photos','review'])$(id).addEventListener('input',()=>{$('download-pdf').disabled=true;});
  for(const id of ['clear','sample','draft','ai-draft'])$(id).addEventListener('click',()=>{$('download-pdf').disabled=true;});
- window.addEventListener('hashchange',()=>{if(location.hash==='#receipts')load();});if(location.hash==='#receipts')load();
+ window.addEventListener('hashchange',()=>{if(location.hash==='#log')load();});if(location.hash==='#log')load();
 })();

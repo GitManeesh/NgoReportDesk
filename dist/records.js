@@ -27,9 +27,9 @@
     $('draft-label').textContent=saved?'SAVED / APPROVED':approved?'APPROVED / READY TO SAVE':'DRAFT / REVIEW REQUIRED';
     if(saved) {
       $('save-status').textContent=`Record saved · ${savedRecord.id} · ${new Date(savedRecord.created_at).toLocaleString()}`;
-      $('status').textContent='Your approved report is saved in Records.';
+      $('status').textContent='Your approved report is saved.';
     } else if(approved) {
-      $('save-status').textContent='Approved. Save this version to keep it in Records.';
+      $('save-status').textContent='Approved. Save this version to keep it in saved reports.';
       $('status').textContent='Report approved. Ready to save or download.';
     } else $('save-status').textContent='';
   }
@@ -105,7 +105,7 @@
   };
   request('?resource=settings').then(({records})=>{const s=records[0];if(!s)return;$('schedule-org').value=s.org;$('weekly-enabled').checked=s.weekly_enabled;$('monthly-enabled').checked=s.monthly_enabled;$('coordinator-email').value=s.coordinator_email;$('coordinator-whatsapp').value=s.coordinator_whatsapp;}).catch(()=>{});
   $('refresh-records').onclick=loadRecords;
-  window.addEventListener('hashchange',()=>{if(location.hash==='#records')loadRecords();});
-  if(location.hash==='#records')loadRecords();
+  window.addEventListener('hashchange',()=>{if(['#records','#field-notes'].includes(location.hash))loadRecords();});
+  if(['#records','#field-notes'].includes(location.hash))loadRecords();
   sync();
 })();
