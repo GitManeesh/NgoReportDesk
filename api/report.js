@@ -25,6 +25,6 @@ async function handler(req,res){
   const report=validateOutput(response.report,input);
   const report_text=Contract.build(input,report);
   return res.status(200).json({report,report_text,word_count:Contract.count(report_text),requires_review:true,request_id:response.request_id});
- }catch{return res.status(502).json({error:'We couldn’t verify the draft. Please try again. Your notes have not been sent to any recipient.'});}
+ }catch(e){console.error(JSON.stringify({event:'report_generation_failed',type:e.name==='TimeoutError'?'timeout':'response_validation'}));return res.status(502).json({code:e.name==='TimeoutError'?'AI_TIMEOUT':'AI_RESPONSE_INVALID',error:e.name==='TimeoutError'?'The AI service took too long to respond. Please try again shortly.':'We couldn’t verify the draft. Please try again. Your notes have not been sent to any recipient.'});}
 }
 module.exports=handler;module.exports.validateInput=validateInput;module.exports.validateOutput=validateOutput;
