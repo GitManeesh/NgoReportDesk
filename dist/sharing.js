@@ -10,5 +10,5 @@
   return{accepted,uncertain};
  };
  $('refresh-contacts').onclick=contacts;$('refresh-notifications').onclick=activity;
- window.addEventListener('hashchange',()=>{if(location.hash==='#share'){contacts();activity();}});if(location.hash==='#share'){contacts();activity();}
+ window.addEventListener('hashchange',()=>{if(location.hash==='#log')activity();});if(location.hash==='#log')activity();
 })();
