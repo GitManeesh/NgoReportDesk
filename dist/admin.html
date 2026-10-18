@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Office Bearer Log — NGO Report Desk</title><link rel="stylesheet" href="style.css?v=15"><link rel="stylesheet" href="admin.css?v=1"></head>
+<body><header><a class="brand" href="/"><span>NGO</span> REPORT DESK</a><nav><a href="/">Return to application</a><button id="logout" class="secondary" hidden>Log out</button></nav></header>
+<main class="admin-shell"><section id="login-panel"><p class="page-kicker">RESTRICTED ACCESS</p><h1>Office bearer login</h1><p class="workspace-note">Use the organisation access code. The session expires after eight hours.</p><form id="login-form"><label for="admin-password">Access code</label><input id="admin-password" type="password" autocomplete="current-password" maxlength="200" required><button type="submit">Open records →</button><p id="login-status" role="status"></p></form></section>
+<section id="records-panel" hidden><div class="admin-heading"><div><p class="page-kicker">SUPABASE RECORDS</p><h1>Operations log</h1></div><button id="refresh" class="secondary">Refresh all</button></div><p id="records-status" role="status"></p>
+<h2>Donations</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Donor</th><th>Amount</th><th>Mode</th><th>Receipt</th><th>Receipt sent</th><th>Thank-you sent</th></tr></thead><tbody id="donations"></tbody></table></div>
+<h2>Delivery activity</h2><div id="notifications" class="admin-list"></div>
+<h2>12-month donor follow-up</h2><div id="lapsed" class="admin-list"></div></section></main><footer>NGO Report Desk · Restricted office-bearer access</footer><script src="admin.js?v=1"></script></body></html>

@@ -67,6 +67,13 @@ Deno.serve(async (req) => {
         await table('ngo_report_drafts','?on_conflict=owner_hash,period',{method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=minimal'},body:JSON.stringify({owner_hash:b.owner_hash,org:b.org,period:b.period,content:b.content})});return reply(200,{saved:true});
       }
       if(b.action==='donations')return reply(200,{donations:await table('ngo_donations',`?owner_hash=eq.${b.owner_hash}&select=donor,email,whatsapp,donated_on&order=donated_on.desc&limit=1000`)});
+      if(b.action==='admin_records'){
+        if(!['donations','notifications','lapsed'].includes(b.resource))return reply(400,{error:'Unsupported record type.'});
+        const name=b.resource==='notifications'?'ngo_notification_outbox':'ngo_donations';
+        const rows=await table(name,`?owner_hash=eq.${b.owner_hash}&select=*&order=created_at.desc&limit=1000`);for(const row of rows)delete row.owner_hash;
+        if(b.resource==='lapsed'){const latest=new Map();for(const row of rows){const identity=row.email.toLowerCase()||row.whatsapp||row.donor.toLowerCase();const prev=latest.get(identity);if(!prev||row.donated_on>prev.donated_on)latest.set(identity,row);}const cutoff=new Date();cutoff.setUTCFullYear(cutoff.getUTCFullYear()-1);return reply(200,{donors:[...latest.values()].filter(row=>row.donated_on<cutoff.toISOString().slice(0,10)),limited:rows.length===1000});}
+        return reply(200,{records:rows,limited:rows.length===1000});
+      }
       return reply(400,{error:'Unknown worker action.'});
     }
     if(resource==='report_delivery'){
