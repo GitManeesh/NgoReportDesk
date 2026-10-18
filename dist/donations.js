@@ -5,8 +5,8 @@
  const el=(tag,text)=>{const node=document.createElement(tag);node.textContent=text;return node;};
  async function request(path,options={}){
   let token=key();if(!token){token=Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,'0')).join('');localStorage.setItem('ngo-report-desk-workspace-v1',token);}
-  const r=await fetch(EDGE+path,{...options,headers:{'Content-Type':'application/json','X-Workspace-Key':token},signal:AbortSignal.timeout(20000)});
-  const data=await r.json();if(!r.ok)throw Error(data.error||'Record storage is unavailable.');return data;
+  let r;try{r=await fetch(EDGE+path,{...options,headers:{'Content-Type':'application/json','X-Workspace-Key':token},signal:AbortSignal.timeout(20000)});}catch(e){throw Error(e.name==='TimeoutError'?'Saving took too long. Retry safely; a duplicate receipt will not be created.':'Could not reach record storage. Check your connection and try again.');}
+  let data;try{data=await r.json();}catch{throw Error('Record storage returned an unreadable response.');}if(!r.ok)throw Error(data.error||'Record storage is unavailable.');return data;
  }
  async function downloadPdf(payload,filename,status){
   status.textContent='Preparing PDF…';
@@ -26,7 +26,7 @@
  let customThanks=false;$('thank-you').addEventListener('input',()=>customThanks=true);
  for(const id of ['donor-name','donation-org','donation-amount'])$(id).addEventListener('input',()=>{if(!customThanks&&$('donor-name').value.trim()&&$('donation-org').value.trim()&&Number($('donation-amount').value)>0){$('thank-you').value='Dear '+$('donor-name').value.trim()+', thank you for your donation of INR '+Number($('donation-amount').value).toFixed(2)+' to '+$('donation-org').value.trim()+'. Your donation receipt is attached.';}});
  $('donation-form').onsubmit=async(event)=>{
-  event.preventDefault();if(busy||!$('donation-approval').checked)return;if(!$('donation-org').value.trim()){$('donation-status').textContent='Add your organisation in Settings first.';$('settings-dialog').showModal();$('workspace-org').focus();return;}
+  event.preventDefault();if(busy)return;if(!$('donation-approval').checked){$('donation-status').textContent='Check the confirmation box before saving.';$('donation-approval').focus();return;}if(!$('donation-org').value.trim()){$('donation-status').textContent='Enter the organisation name.';$('donation-org').focus();return;}
   busy=true;$('save-donation').disabled=true;
   const contact=$('donor-contact').value.trim();$('donor-email').value=contact.includes('@')?contact:'';$('donor-whatsapp').value=contact.includes('@')?'':contact;
   const fields={org:'donation-org',donor:'donor-name',donated_on:'donation-date',amount:'donation-amount',mode:'donation-mode',email:'donor-email',whatsapp:'donor-whatsapp',thank_you:'thank-you'};

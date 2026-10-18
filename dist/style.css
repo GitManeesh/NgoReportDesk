@@ -26,3 +26,47 @@ select{width:100%;padding:16px;background:#f8f7f0;border:1px solid #c9c5b5;font:
 
 /* Adapt the original skin to the simplified intake layout. */
 header{justify-content:space-between;align-items:center;padding:24px 6% 0}header .brand{max-width:none;font-family:'Barlow Condensed',Impact,sans-serif;font-size:32px}header .brand span{color:#f3d34f}header>button.secondary{background:transparent;color:#f3d34f;border:1px solid #777363;font-size:14px;min-height:44px;padding:10px 16px}nav{width:100%;order:3;gap:32px;flex-wrap:nowrap;padding-bottom:0}nav a{padding:14px 0;white-space:nowrap}main{max-width:1220px;margin:auto;padding:0 32px 40px}.content-page{padding:40px 0;max-width:none}h1{font-size:clamp(42px,5vw,65px);line-height:1;letter-spacing:-1px;margin:0 0 16px;color:#171714}.content-page h2{font-size:44px}.workspace-note{font-size:16px;margin-bottom:28px}.grid{align-items:start}.donation-grid{grid-template-columns:1.6fr 1fr}.process-card{background:#f3d34f;color:#171714;border:1px solid #bda53e;border-radius:0;padding:30px}.process-icon{font-size:70px;line-height:1}.process-card h2{font-family:'Barlow Condensed',Impact,sans-serif;font-size:43px;text-transform:uppercase;line-height:1.05}.process-card ol{padding-left:22px}.process-card li{color:#3f381c;padding:10px 0}.process-card .muted{color:#514714}.process-card .underlink{display:inline-block;margin:16px 0}.workspace-panel{border:1px solid #c6c2b4;background:#e8e5d8;padding:0 24px;margin:18px 0}.workspace-panel>summary{font-family:'Barlow Condensed',Impact,sans-serif;font-size:23px;text-transform:uppercase;padding:20px 0}.workspace-panel .content-page{padding-top:20px}.table-wrap{overflow:auto;border:1px solid #c6c2b4;margin:20px 0}table{white-space:nowrap;font-size:14px}th{background:#e1dccb;color:#343026}td button{font-size:12px;min-height:34px;padding:7px 10px;margin-top:8px}dialog{width:min(660px,calc(100% - 32px));max-height:85vh;overflow:auto;background:#f0efe8;color:#171714;border:1px solid #777363;border-radius:0;padding:28px}dialog::backdrop{background:#0009}.settings-heading{display:flex;justify-content:space-between;align-items:center;gap:16px}.settings-heading h2{margin:0}.settings-heading button{font-size:14px;min-height:42px}details{margin:18px 0}summary{padding-left:0}label{font-size:16px}input:not([type=checkbox]),textarea,select{font-size:16px}#donation-form input{margin-bottom:16px}#save-donation{display:block;margin-left:auto;min-width:180px}#donation-status:empty{display:none}#draft-area button{margin-bottom:8px}.report-view-controls{flex-wrap:wrap}#field-note-list img{border-radius:0}footer{max-width:none;margin:0;padding:24px 6%;font-weight:600;letter-spacing:.4px}[hidden]{display:none!important}.page-kicker{font-size:11px;margin-bottom:12px}.view{min-height:70vh}@media(max-width:760px){header{padding:20px 20px 0;gap:14px}header .brand{font-size:25px}header>button.secondary{font-size:13px;padding:8px 12px}nav{gap:26px}main{padding:0 18px 28px}.grid,.donation-grid{grid-template-columns:1fr}.content-page{padding:28px 0}.content-page h2{font-size:36px}.workspace-panel{padding:0 14px}.process-card{padding:24px}.process-card h2{font-size:35px}article{padding:20px}#report{padding:24px 0}#save-donation{width:100%}dialog{padding:20px}#report .grid{grid-template-columns:1fr}}
+/* Project 28 compact application shell */
+header{height:72px;min-height:72px;padding:0 clamp(18px,4vw,56px);display:flex;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:28px;position:sticky;top:0;z-index:30;background:#0c0c0b}
+header .brand{font-size:clamp(22px,2.2vw,30px);flex:0 0 auto}
+header nav{order:initial;width:auto;display:flex;flex-wrap:nowrap;gap:clamp(18px,3vw,34px);overflow:visible;margin-left:auto}
+header nav a{font-size:15px;padding:24px 0 20px;line-height:1}
+main{max-width:1180px;margin:auto;padding:0 clamp(16px,3vw,32px) 24px}
+.content-page{padding:24px 0}
+.view{min-height:calc(100vh - 120px)}
+h1{font-size:clamp(36px,4vw,54px);margin:0 0 8px}
+.content-page h2{font-size:clamp(32px,3.5vw,46px);margin-bottom:8px}
+.workspace-note{font-size:14px;margin:0 0 16px}
+.grid{gap:18px}
+.donation-grid{grid-template-columns:minmax(0,1.45fr) minmax(260px,.8fr)}
+article{padding:20px}
+label{font-size:14px;margin-top:8px}
+input:not([type=checkbox]),textarea,select{font-size:15px;padding:10px 12px;margin:5px 0 11px}
+textarea{height:100px;min-height:88px}
+#fn-notes,#fn-captions{height:92px}
+button,.primary{font-size:14px;min-height:42px;padding:10px 16px}
+.approval{font-size:14px;margin:12px 0;padding:0;background:transparent}
+details{margin:10px 0}
+summary{font-size:14px;padding:8px 0}
+.process-card{padding:22px}
+.process-icon{font-size:46px}
+.process-card h2{font-size:34px;margin:10px 0}
+.process-card li{padding:5px 0;font-size:15px}
+.process-card .muted{font-size:12px}
+.table-wrap{margin:12px 0}
+td,th{padding:10px}
+footer{padding:14px 4%;margin:0}
+dialog[hidden]{display:none!important}
+@media(max-width:760px){
+ header{height:auto;min-height:0;padding:14px 18px 0;flex-wrap:wrap;gap:8px}
+ header .brand{width:100%}
+ header nav{width:100%;margin:0;justify-content:space-between;gap:16px;overflow:auto}
+ header nav a{padding:11px 0 13px;font-size:14px}
+ main{padding:0 16px 18px}
+ .content-page{padding:18px 0}
+ .grid,.donation-grid{grid-template-columns:1fr}
+ h1{font-size:38px}
+ .content-page h2{font-size:34px}
+ .process-card{order:2}
+ article{padding:16px}
+}
