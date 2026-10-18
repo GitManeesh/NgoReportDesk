@@ -10,7 +10,6 @@ module.exports=async(req,res)=>{
   const deliveryMode=process.env.NOTIFICATION_MODE==='production'?'production':'test';
   if(deliveryMode==='test'){
    const key=String(req.headers['x-workspace-key']||'');if(!/^[a-f0-9]{64}$/.test(key))return res.status(401).json({error:'A valid workspace key is required.'});
-   const allowed=[process.env.TEST_DONOR_EMAIL,process.env.TEST_DONOR_WHATSAPP,process.env.TEST_COORDINATOR_EMAIL,process.env.TEST_COORDINATOR_WHATSAPP].filter(Boolean);if(!allowed.length)return res.status(503).json({error:'Configure at least one authorized test recipient.'});
    const r=await fetch(EDGE+'?resource=simulate_notifications',{method:'POST',headers:{'Content-Type':'application/json','X-Workspace-Key':key},body:'{}',signal:AbortSignal.timeout(15000)});const d=await r.json();if(!r.ok)throw Error(d.error||'Simulation unavailable.');return res.status(200).json(d);
   }
   if(!same(String(req.headers['x-ngo-key']||''),process.env.N8N_WEBHOOK_SECRET)){
