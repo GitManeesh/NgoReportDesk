@@ -26,6 +26,13 @@ test('Save donation reports approval and storage failures instead of returning s
  assert.doesNotMatch(html,/id="donation-approval" type="checkbox" required/);
 });
 
+test('donation intake supports independent Gmail and WhatsApp delivery',()=>{
+ assert.match(html,/id="donor-email" type="email"/);
+ assert.match(html,/id="donor-whatsapp" type="tel"/);
+ assert.doesNotMatch(html,/id="donor-contact"/);
+ assert.match(donations,/!data\.email&&!data\.whatsapp/);
+});
+
 test('legacy Settings dialog is inaccessible and compact responsive rules load last',()=>{
  assert.match(html,/<dialog id="settings-dialog" hidden aria-hidden="true">/);
  assert.match(css,/Project 28 compact application shell/);

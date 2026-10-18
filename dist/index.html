@@ -35,7 +35,7 @@
         <section class="content-page">
           <h1>Record a donation</h1>
           <p class="workspace-note">
-            Save once. Track the receipt and thank-you in Log.
+            Save once. Add an email, WhatsApp number, or both. Track each channel in Log.
           </p>
           <div class="grid donation-grid">
             <article>
@@ -62,16 +62,9 @@
                   <option>Cash</option>
                   <option>Cheque</option>
                   <option>Other</option></select
-                ><label for="donor-contact">Email or WhatsApp</label
-                ><input
-                  id="donor-contact"
-                  required
-                  maxlength="254"
-                  placeholder="Email address or +91…"
-                /><input id="donor-email" type="hidden" /><input
-                  id="donor-whatsapp"
-                  type="hidden"
-                />
+                ><label for="donor-email">Email</label
+                ><input id="donor-email" type="email" maxlength="254" placeholder="donor@example.org" /><label for="donor-whatsapp">WhatsApp</label
+                ><input id="donor-whatsapp" type="tel" maxlength="16" inputmode="tel" placeholder="+919876543210" />
                 <details class="thank-you-details">
                   <summary>Review thank-you message</summary>
                   <label for="thank-you">Personal thank-you</label

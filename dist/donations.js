@@ -28,9 +28,9 @@
  $('donation-form').onsubmit=async(event)=>{
   event.preventDefault();if(busy)return;if(!$('donation-approval').checked){$('donation-status').textContent='Check the confirmation box before saving.';$('donation-approval').focus();return;}if(!$('donation-org').value.trim()){$('donation-status').textContent='Enter the organisation name.';$('donation-org').focus();return;}
   busy=true;$('save-donation').disabled=true;
-  const contact=$('donor-contact').value.trim();$('donor-email').value=contact.includes('@')?contact:'';$('donor-whatsapp').value=contact.includes('@')?'':contact;
   const fields={org:'donation-org',donor:'donor-name',donated_on:'donation-date',amount:'donation-amount',mode:'donation-mode',email:'donor-email',whatsapp:'donor-whatsapp',thank_you:'thank-you'};
   const data=Object.fromEntries(Object.entries(fields).map(([k,id])=>[k,$(id).value.trim()]));
+  if(!data.email&&!data.whatsapp){$('donation-status').textContent='Add an email address, WhatsApp number, or both.';$('donor-email').focus();busy=false;$('save-donation').disabled=false;return;}
   $('donation-status').textContent='Creating receipt…';
   try{
    const result=await request('?resource=donations',{method:'POST',body:JSON.stringify({...data,client_id:clientId,currency:'INR',approved:true})});
