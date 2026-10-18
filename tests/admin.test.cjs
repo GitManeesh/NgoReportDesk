@@ -1,0 +1,7 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+const auth=require('../lib/admin-auth.cjs'),session=require('../api/admin-session.js'),records=require('../api/admin-records.js');
+const response=()=>({headers:{},setHeader(k,v){this.headers[k]=v;},status(n){this.code=n;return this;},json(v){this.body=v;return this;}});
+const setup=()=>{process.env.ADMIN_PASSWORD_SHA256=crypto.createHash('sha256').update('correct horse').digest('hex');process.env.ADMIN_SESSION_SECRET='s'.repeat(64);process.env.ADMIN_WORKSPACE_KEY='a'.repeat(64);};
+test('admin login sets a secure cookie and accepts that session',async()=>{setup();const r=response();await session({method:'POST',headers:{},body:{password:'correct horse'},socket:{}},r);assert.equal(r.code,200);assert.match(r.headers['Set-Cookie'],/HttpOnly; Secure; SameSite=Strict/);const cookie=r.headers['Set-Cookie'].split(';')[0];assert.equal(auth.validSession({headers:{cookie}}),true);});
+test('admin rejects a wrong access code',async()=>{setup();const r=response();await session({method:'POST',headers:{},body:{password:'wrong'},socket:{}},r);assert.equal(r.code,401);});
+test('record proxy requires an admin session',async()=>{setup();const r=response();await records({method:'GET',headers:{},query:{resource:'donations'}},r);assert.equal(r.code,401);});
