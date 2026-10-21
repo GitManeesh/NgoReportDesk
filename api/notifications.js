@@ -9,6 +9,11 @@ module.exports=async(req,res)=>{
  try{
   const deliveryMode=process.env.NOTIFICATION_MODE==='production'?'production':'test';
   if(deliveryMode==='test'){
+   // Scheduled n8n requests use the service secret, not a browser workspace key.
+   // In test mode acknowledge them without claiming jobs or sending messages.
+   if(same(String(req.headers['x-ngo-key']||''),process.env.N8N_WEBHOOK_SECRET)){
+    return res.status(200).json({mode:'test',processed:0,accepted:0,simulated:0,uncertain:0,skipped:true,reason:'Scheduled delivery disabled in test mode.'});
+   }
    const key=String(req.headers['x-workspace-key']||'');if(!/^[a-f0-9]{64}$/.test(key))return res.status(401).json({error:'A valid workspace key is required.'});
    const r=await fetch(EDGE+'?resource=simulate_notifications',{method:'POST',headers:{'Content-Type':'application/json','X-Workspace-Key':key},body:'{}',signal:AbortSignal.timeout(15000)});const d=await r.json();if(!r.ok)throw Error(d.error||'Simulation unavailable.');return res.status(200).json(d);
   }
